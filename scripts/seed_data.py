@@ -16,12 +16,16 @@ def seed_database():
     # Use environment variable or default
     db_url = os.getenv("DATABASE_URL", "postgresql://postgres.pjtgbdtxinvnrjxnckmu:Toast%401234567890123@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres")
     engine = create_engine(db_url)
-    
+
+    from sqlmodel import select
+
+    # ...
+
     with Session(engine) as session:
         # Check if users already exist
-        existing_admin = session.query(User).filter(User.username == "admin").first()
-        existing_user = session.query(User).filter(User.username == "user").first()
-        
+        existing_admin = session.exec(select(User).where(User.username == "admin")).first()
+        existing_user = session.exec(select(User).where(User.username == "user")).first()
+
         if existing_admin and existing_user:
             print("Sample users already exist. Skipping user creation.")
         else:
@@ -34,7 +38,7 @@ def seed_database():
                 )
                 session.add(admin_user)
                 print("Created admin user")
-            
+
             # Create regular user
             if not existing_user:
                 regular_user = User(
@@ -44,17 +48,16 @@ def seed_database():
                 )
                 session.add(regular_user)
                 print("Created regular user")
-            
+
             session.commit()
-        
-        # Get user IDs for project creation
-        admin_user = session.query(User).filter(User.username == "admin").first()
-        
+
+        # Get admin user again (now committed)
+        admin_user = session.exec(select(User).where(User.username == "admin")).first()
+
         # Check if projects already exist
-        existing_projects = session.query(Project).count()
-        
-        if existing_projects == 0:
-            # Create sample projects
+        existing_projects = session.exec(select(Project)).all()
+
+        if not existing_projects:
             projects = [
                 Project(
                     name="Sample Project 1",
@@ -67,18 +70,15 @@ def seed_database():
                     created_by=admin_user.id
                 )
             ]
-            
+
             for project in projects:
                 session.add(project)
-            
+
             session.commit()
             print("Created sample projects")
         else:
             print("Sample projects already exist. Skipping project creation.")
-        
-        print("\nDatabase seeded successfully!")
-        print("Admin user: username='admin', password='admin123'")
-        print("Regular user: username='user', password='user123'")
+
 
 if __name__ == "__main__":
     seed_database()
